@@ -7,6 +7,8 @@ export default function Login() {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const validate = () => {
@@ -15,42 +17,69 @@ export default function Login() {
     return "";
   };
 
-  const submit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    const v = validate();
-    if (v) return setError(v);
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     try {
+      setLoading(true);
       const res = await api.post("/auth/login", { login, password });
       setToken(res.data.token);
       navigate("/feed");
     } catch (err) {
       setError("Неверный логин или пароль");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Login</h2>
+    <div className="page-full">
+      <div className="auth-card">
+        <h2 className="auth-title">Login</h2>
 
-      <form onSubmit={submit} style={{ display: "grid", gap: 10, maxWidth: 320 }}>
-        <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Login" />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          type="password"
-        />
-        <button type="submit">Login</button>
-      </form>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label">
+            Логин
+            <input
+              className="auth-input"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="Введите логин"
+            />
+          </label>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+          <label className="auth-label">
+            Пароль
+            <input
+              className="auth-input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Введите пароль"
+            />
+          </label>
 
-      <p>
-        Нет аккаунта? <Link to="/register">Регистрация</Link>
-      </p>
+          {error && <p className="auth-error">{error}</p>}
+
+          <button className="auth-button" type="submit" disabled={loading}>
+            {loading ? "Входим..." : "Login"}
+          </button>
+        </form>
+
+        <p className="auth-bottom-text">
+          Нет аккаунта?{" "}
+          <Link to="/register" className="auth-link">
+            Регистрация
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

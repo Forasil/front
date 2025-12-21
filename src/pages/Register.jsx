@@ -5,62 +5,97 @@ import api from "../api/axios";
 export default function Register() {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
-  const [password2, setPassword2] = useState("");
+  const [passwordRepeat, setPasswordRepeat] = useState("");
   const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const validate = () => {
     if (!login.trim()) return "Введите логин";
     if (password.length < 6) return "Пароль минимум 6 символов";
-    if (password !== password2) return "Пароли не совпадают";
+    if (password !== passwordRepeat) return "Пароли не совпадают";
     return "";
   };
 
-  const submit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setOk("");
+    setSuccess("");
 
-    const v = validate();
-    if (v) return setError(v);
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     try {
+      setLoading(true);
       await api.post("/auth/register", { login, password });
-      setOk("Успешно! Теперь войдите.");
-      setTimeout(() => navigate("/login"), 600);
+      setSuccess("Регистрация прошла успешно! Теперь можно войти.");
+      // чуть позже отправим на страницу логина
+      setTimeout(() => navigate("/login"), 1000);
     } catch (err) {
-      setError("Не удалось зарегистрироваться (возможно логин занят)");
+      setError("Не удалось зарегистрироваться (логин мог уже занять другой пользователь)");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Register</h2>
+    <div className="page-full">
+      <div className="auth-card">
+        <h2 className="auth-title">Register</h2>
 
-      <form onSubmit={submit} style={{ display: "grid", gap: 10, maxWidth: 320 }}>
-        <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Login" />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          type="password"
-        />
-        <input
-          value={password2}
-          onChange={(e) => setPassword2(e.target.value)}
-          placeholder="Repeat password"
-          type="password"
-        />
-        <button type="submit">Register</button>
-      </form>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label">
+            Логин
+            <input
+              className="auth-input"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="Придумайте логин"
+            />
+          </label>
 
-      {ok && <p style={{ color: "green" }}>{ok}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+          <label className="auth-label">
+            Пароль
+            <input
+              className="auth-input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Придумайте пароль"
+            />
+          </label>
 
-      <p>
-        Уже есть аккаунт? <Link to="/login">Войти</Link>
-      </p>
+          <label className="auth-label">
+            Повторите пароль
+            <input
+              className="auth-input"
+              type="password"
+              value={passwordRepeat}
+              onChange={(e) => setPasswordRepeat(e.target.value)}
+              placeholder="Повторите пароль"
+            />
+          </label>
+
+          {error && <p className="auth-error">{error}</p>}
+          {success && <p className="auth-success">{success}</p>}
+
+          <button className="auth-button" type="submit" disabled={loading}>
+            {loading ? "Отправляем..." : "Register"}
+          </button>
+        </form>
+
+        <p className="auth-bottom-text">
+          Уже есть аккаунт?{" "}
+          <Link to="/login" className="auth-link">
+            Войти
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
