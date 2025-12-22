@@ -8,11 +8,10 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
 
   const validate = () => {
-    if (!login.trim()) return "Введите логин";
+    if (!login.trim()) return "Введите логин или email";
     if (password.length < 6) return "Пароль минимум 6 символов";
     return "";
   };
@@ -21,18 +20,29 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
+    const v = validate();
+    if (v) {
+      setError(v);
       return;
     }
 
     try {
       setLoading(true);
-      const res = await api.post("/auth/login", { login, password });
-      setToken(res.data.token);
+
+      const res = await api.post("/auth/login", {
+        usernameOrEmail: login,
+        password,
+      });
+
+      const token = res.data?.data?.token;
+      if (!token) {
+        throw new Error("Token not found in response");
+      }
+
+      setToken(token);
       navigate("/feed");
     } catch (err) {
+      console.error(err);
       setError("Неверный логин или пароль");
     } finally {
       setLoading(false);
@@ -46,12 +56,12 @@ export default function Login() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="auth-label">
-            Логин
+            Логин или email
             <input
               className="auth-input"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
-              placeholder="Введите логин"
+              placeholder="Логин или email"
             />
           </label>
 
@@ -62,7 +72,7 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Введите пароль"
+              placeholder="Пароль"
             />
           </label>
 

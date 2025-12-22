@@ -4,8 +4,10 @@ import api from "../api/axios";
 
 export default function Register() {
   const [login, setLogin] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,6 +16,8 @@ export default function Register() {
 
   const validate = () => {
     if (!login.trim()) return "Введите логин";
+    if (!email.trim()) return "Введите email";
+    if (!email.includes("@")) return "Некорректный email";
     if (password.length < 6) return "Пароль минимум 6 символов";
     if (password !== passwordRepeat) return "Пароли не совпадают";
     return "";
@@ -32,12 +36,19 @@ export default function Register() {
 
     try {
       setLoading(true);
-      await api.post("/auth/register", { login, password });
+
+      await api.post("/auth/register", {
+        username: login,
+        email,
+        password,
+      });
+
       setSuccess("Регистрация прошла успешно! Теперь можно войти.");
-      // чуть позже отправим на страницу логина
       setTimeout(() => navigate("/login"), 1000);
     } catch (err) {
-      setError("Не удалось зарегистрироваться (логин мог уже занять другой пользователь)");
+      setError(
+        "Не удалось зарегистрироваться (логин или email уже могут быть заняты)"
+      );
     } finally {
       setLoading(false);
     }
@@ -56,6 +67,17 @@ export default function Register() {
               value={login}
               onChange={(e) => setLogin(e.target.value)}
               placeholder="Придумайте логин"
+            />
+          </label>
+
+          <label className="auth-label">
+            Email
+            <input
+              className="auth-input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Введите email"
             />
           </label>
 
