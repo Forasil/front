@@ -11,20 +11,44 @@ export default function PostDetails() {
   const [comments, setComments] = useState([]);
   const [myRating, setMyRating] = useState(0);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const load = async () => {
+    if (!id) {
+      setError("Некорректный id поста");
+      return;
+    }
+
     setError("");
+    setLoading(true);
+
     try {
       const res = await api.get(`/posts/${id}`);
-      setPost(res.data);
+      const postData = res.data?.data ?? res.data;
+      setPost(postData);
 
-      const cr = await api.get(`/posts/${id}/comments`);
-      setComments(cr.data);
+      try {
+        const cr = await api.get(`/posts/${id}/comments`);
+        const raw = cr.data?.data ?? cr.data;
+        const items = raw?.items ?? raw ?? [];
+        setComments(Array.isArray(items) ? items : []);
+      } catch (e) {
+        console.warn("Ошибка загрузки комментариев", e);
+      }
 
-      const rr = await api.get(`/posts/${id}/my-rating`);
-      setMyRating(rr.data.value ?? 0);
+      try {
+        const rr = await api.get(`/posts/${id}/my-rating`);
+        const ratingValue =
+          rr.data?.data?.value ?? rr.data?.value ?? rr.data ?? 0;
+        setMyRating(Number(ratingValue) || 0);
+      } catch (e) {
+        console.warn("Ошибка загрузки рейтинга", e);
+      }
     } catch (e) {
+      console.error(e);
       setError("Не удалось загрузить пост");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -35,8 +59,9 @@ export default function PostDetails() {
   const sendComment = async (text) => {
     try {
       await api.post(`/posts/${id}/comments`, { text });
-      load();
+      await load();
     } catch (e) {
+      console.error(e);
       alert("Не удалось отправить комментарий");
     }
   };
@@ -45,17 +70,19 @@ export default function PostDetails() {
     try {
       await api.post(`/posts/${id}/rating`, { value });
       setMyRating(value);
-      load();
+      await load();
     } catch (e) {
+      console.error(e);
       alert("Не удалось поставить оценку");
     }
   };
 
+  if (loading && !post) return <p>Loading...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (!post) return <p>Loading...</p>;
+  if (!post) return null;
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div style={{ display: "grid", gap: 16 }}>
       <h2>{post.title}</h2>
       <p style={{ opacity: 0.7 }}>author: {post.authorLogin}</p>
       <p>{post.text}</p>

@@ -4,15 +4,24 @@ import PostCard from "../components/PostCard";
 
 export default function Favorites() {
   const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
+    setLoading(true);
     setError("");
+
     try {
-      const res = await api.get("/favorites");
-      setPosts(res.data);
+      const res = await api.get("/posts/popular");
+
+      const items = res.data?.data?.items ?? [];
+
+      setPosts(Array.isArray(items) ? items : []);
     } catch (e) {
-      setError("Не удалось загрузить избранное");
+      console.error(e);
+      setError("Не удалось загрузить избранное (популярные посты)");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -20,22 +29,23 @@ export default function Favorites() {
     load();
   }, []);
 
-  const toggleFavorite = async (postId) => {
-    try {
-      await api.post(`/favorites/toggle/${postId}`);
-      load();
-    } catch {
-      alert("Не удалось изменить избранное");
-    }
-  };
-
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <h2>Favorites</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {posts.map((p) => (
-        <PostCard key={p.id} post={p} onToggleFavorite={toggleFavorite} />
-      ))}
+    <div className="page-full">
+      <div className="page-inner">
+        <h2 className="page-title">Favorites</h2>
+
+        {loading && <p>Загружаем популярные посты...</p>}
+        {error && <p className="auth-error">{error}</p>}
+
+        {!loading && !error && posts.length === 0 && (
+          <p>Пока нет популярных постов.</p>
+        )}
+
+        <div className="post-list">
+          {Array.isArray(posts) &&
+            posts.map((post) => <PostCard key={post.id} post={post} />)}
+        </div>
+      </div>
     </div>
   );
 }

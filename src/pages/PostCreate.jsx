@@ -4,16 +4,22 @@ import api from "../api/axios";
 
 export default function PostCreate() {
   const [title, setTitle] = useState("");
-  const [text, setText] = useState("");
-  const [tags, setTags] = useState("");
+  const [content, setContent] = useState("");
+  const [tagsText, setTagsText] = useState("");
+  const [featured, setFeatured] = useState(false);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
   const validate = () => {
-    if (title.trim().length < 3) return "Заголовок минимум 3 символа";
-    if (text.trim().length < 10) return "Текст минимум 10 символов";
+    const t = title.trim();
+    const c = content.trim();
+
+    if (!t) return "Заголовок обязателен";
+    if (t.length > 200) return "Заголовок не длиннее 200 символов";
+    if (!c) return "Текст обязателен";
     return "";
   };
 
@@ -27,23 +33,38 @@ export default function PostCreate() {
       return;
     }
 
-    const tagsArray = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    const tags =
+      tagsText
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean) || [];
+
+    const body = {
+      title: title.trim(),
+      content: content.trim(),
+      tags,
+      featured,
+    };
 
     try {
       setLoading(true);
 
-      const res = await api.post("/posts", {
-        title: title.trim(),
-        content: text.trim(),
-        tags: tagsArray,
-      });
+      const res = await api.post("/posts", body);
 
-      navigate(`/posts/${res.data.id}`);
-    } catch (e) {
-      setError("Validation failed");
+      console.log("Создан пост:", res.data?.data);
+
+      navigate("/feed");
+    } catch (err) {
+      console.error(err);
+      const status = err?.response?.status;
+
+      if (status === 400) {
+        setError("Сервер отклонил данные. Проверь заголовок и текст.");
+      } else if (status === 403) {
+        setError("Нет прав для создания поста (нужно войти под аккаунтом).");
+      } else {
+        setError("Не удалось создать пост");
+      }
     } finally {
       setLoading(false);
     }
@@ -51,45 +72,59 @@ export default function PostCreate() {
 
   return (
     <div className="page-full">
-      <div className="post-create-card">
-        <h2 className="post-create-title">Create post</h2>
+      <div className="page-inner">
+        <h2 className="page-title">Create post</h2>
 
-        <form className="post-create-form" onSubmit={handleSubmit}>
-          <label className="post-label">
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label">
             Заголовок
             <input
-              className="post-input"
+              className="auth-input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Введите заголовок"
+              placeholder="Название поста"
             />
           </label>
 
-          <label className="post-label">
-            Теги
-            <input
-              className="post-input"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="Например: java, spring, backend"
-            />
-            <span className="post-helper">
-              Перечислите через запятую: <i>tag1, tag2, tag3</i>
-            </span>
-          </label>
-
-          <label className="post-label">
-            Текст поста
+          <label className="auth-label">
+            Текст
             <textarea
-              className="post-textarea"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Напишите ваш пост…"
-              rows={12}
+              className="auth-input"
+              style={{ minHeight: 160, resize: "vertical" }}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Текст поста"
             />
           </label>
 
-          {error && <p className="auth-error" style={{ marginTop: 8 }}>{error}</p>}
+          <label className="auth-label">
+            Теги (через запятую)
+            <input
+              className="auth-input"
+              value={tagsText}
+              onChange={(e) => setTagsText(e.target.value)}
+              placeholder="например: java, spring, web"
+            />
+          </label>
+
+          <label
+            className="auth-label"
+            style={{
+              flexDirection: "row",
+              gap: 8,
+              alignItems: "center",
+              marginTop: 4,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={featured}
+              onChange={(e) => setFeatured(e.target.checked)}
+            />
+            Сделать пост «featured»
+          </label>
+
+          {error && <p className="auth-error">{error}</p>}
 
           <button className="auth-button" type="submit" disabled={loading}>
             {loading ? "Публикуем..." : "Publish"}
